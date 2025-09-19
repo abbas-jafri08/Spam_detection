@@ -19,7 +19,8 @@ const App = () => {
 
   const handlePredict = async () => {
     try {
-      const res = await axios.post("http://127.0.0.1:5000/predict", {
+      // 🔹 Use your Render backend URL
+      const res = await axios.post("https://spam-detection-cgk5.onrender.com/predict", {
         message: inputMessage,
       });
 
