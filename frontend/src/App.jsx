@@ -18,7 +18,7 @@ const App = () => {
   const [stats, setStats] = useState({ total: 0, spam: 0, ham: 0 });
   const [recentMessages, setRecentMessages] = useState([]);
 
-  const API_URL = "http://127.0.0.1:5000";
+  const API_URL = "https://your-backend-name.onrender.com";
 
   const handlePredict = async () => {
     if (!inputMessage.trim()) return;
