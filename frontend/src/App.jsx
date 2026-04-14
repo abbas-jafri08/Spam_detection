@@ -18,8 +18,8 @@ const App = () => {
   const [stats, setStats] = useState({ total: 0, spam: 0, ham: 0 });
   const [recentMessages, setRecentMessages] = useState([]);
 
-  // 🔥 CHANGE THIS TO YOUR REAL BACKEND URL
-  const API_URL = "https://YOUR-RENDER-BACKEND.onrender.com";
+  
+  const API_URL = "https://spam-detection-cgk5.onrender.com";
 
   const handlePredict = async () => {
     if (!inputMessage.trim()) return;
