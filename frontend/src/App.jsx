@@ -18,7 +18,8 @@ const App = () => {
   const [stats, setStats] = useState({ total: 0, spam: 0, ham: 0 });
   const [recentMessages, setRecentMessages] = useState([]);
 
-  const API_URL = "https://your-backend-name.onrender.com";
+  // 🔥 CHANGE THIS TO YOUR REAL BACKEND URL
+  const API_URL = "https://YOUR-RENDER-BACKEND.onrender.com";
 
   const handlePredict = async () => {
     if (!inputMessage.trim()) return;
@@ -28,44 +29,34 @@ const App = () => {
         message: inputMessage,
       });
 
-      setPrediction(res.data.prediction);
-      setConfidence(res.data.confidence); // ✅ FIXED
+      const label = res.data.prediction.toUpperCase();
+      const conf = res.data.confidence;
 
-      // Update stats
+      setPrediction(label);
+      setConfidence(conf);
+
+      // update stats
       setStats((prev) => {
         const updated = { ...prev, total: prev.total + 1 };
 
-        if (res.data.prediction.toLowerCase() === "spam") {
-          updated.spam += 1;
-        } else {
-          updated.ham += 1;
-        }
+        if (label === "SPAM") updated.spam += 1;
+        else updated.ham += 1;
 
         return updated;
       });
 
-      setRecentMessages(res.data.history);
+      // store locally (since backend has no history)
+      setRecentMessages((prev) => [
+        { text: inputMessage, label },
+        ...prev,
+      ]);
 
-      setInputMessage(""); // ✅ clears input
+      setInputMessage("");
 
     } catch (err) {
-      console.error(err);
+      console.error("Axios Error:", err);
     }
   };
-
-  // Load history on start
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/history`);
-        setRecentMessages(res.data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    fetchHistory();
-  }, []);
 
   const pieData = {
     labels: ["Spam", "Ham"],
@@ -85,7 +76,6 @@ const App = () => {
   return (
     <div className="app-container">
 
-      {/* Sidebar */}
       <div className="sidebar">
         <h3>Quick Stats</h3>
 
@@ -107,10 +97,9 @@ const App = () => {
         <Pie data={pieData} />
 
         <h3>Model Info</h3>
-        <p>Multinomial Naive Bayes + TF-IDF</p> {/* ✅ FIXED */}
+        <p>Naive Bayes + TF-IDF</p>
       </div>
 
-      {/* Main */}
       <div className="main">
         <div className="card">
           <h3>Input Message</h3>
@@ -139,7 +128,6 @@ const App = () => {
         </div>
       </div>
 
-      {/* Right */}
       <div className="right">
         {prediction && (
           <div className="card">
@@ -155,7 +143,7 @@ const App = () => {
               <div
                 className={`progress-fill ${prediction.toLowerCase()}`}
                 style={{ width: `${confidence}%` }}
-              ></div>
+              />
             </div>
           </div>
         )}
