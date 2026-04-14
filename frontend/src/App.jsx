@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Pie } from "react-chartjs-2";
 import {
@@ -16,36 +16,65 @@ const App = () => {
   const [prediction, setPrediction] = useState(null);
   const [confidence, setConfidence] = useState(0);
   const [stats, setStats] = useState({ total: 0, spam: 0, ham: 0 });
+  const [recentMessages, setRecentMessages] = useState([]);
+
+  const API_URL = "http://127.0.0.1:5000";
 
   const handlePredict = async () => {
+    if (!inputMessage.trim()) return;
+
     try {
-      // 🔹 Use your Render backend URL
-      const res = await axios.post("https://spam-detection-cgk5.onrender.com/predict", {
+      const res = await axios.post(`${API_URL}/predict`, {
         message: inputMessage,
       });
 
-      setPrediction(res.data.prediction); // spam | ham
-      setConfidence((res.data.confidence * 100).toFixed(2));
+      setPrediction(res.data.prediction);
+      setConfidence(res.data.confidence); // ✅ FIXED
 
       // Update stats
       setStats((prev) => {
         const updated = { ...prev, total: prev.total + 1 };
-        if (res.data.prediction === "spam") updated.spam += 1;
-        else updated.ham += 1;
+
+        if (res.data.prediction.toLowerCase() === "spam") {
+          updated.spam += 1;
+        } else {
+          updated.ham += 1;
+        }
+
         return updated;
       });
 
+      setRecentMessages(res.data.history);
+
+      setInputMessage(""); // ✅ clears input
+
     } catch (err) {
       console.error(err);
-      alert("Error connecting to backend.");
     }
   };
+
+  // Load history on start
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/history`);
+        setRecentMessages(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchHistory();
+  }, []);
 
   const pieData = {
     labels: ["Spam", "Ham"],
     datasets: [
       {
-        data: [stats.spam, stats.ham],
+        data: [
+          recentMessages.filter(m => m.label === "SPAM").length,
+          recentMessages.filter(m => m.label === "HAM").length
+        ],
         backgroundColor: ["#e74c3c", "#2ecc71"],
         borderColor: "#fff",
         borderWidth: 2,
@@ -53,98 +82,85 @@ const App = () => {
     ],
   };
 
-  const recentMessages = [
-    { text: "Congrats! You won...", label: "Spam" },
-    { text: "Meeting at 3pm...", label: "Ham" },
-    { text: "Verify your account...", label: "Spam" }
-  ];
-
   return (
     <div className="app-container">
+
       {/* Sidebar */}
       <div className="sidebar">
         <h3>Quick Stats</h3>
+
         <div className="stat-box">
-          <span>Total Analyzed</span>
+          <span>Total</span>
           <b>{stats.total}</b>
         </div>
+
         <div className="stat-box">
           <span>Spam %</span>
           <b>{stats.total ? ((stats.spam / stats.total) * 100).toFixed(1) : 0}%</b>
         </div>
+
         <div className="stat-box">
           <span>Ham %</span>
           <b>{stats.total ? ((stats.ham / stats.total) * 100).toFixed(1) : 0}%</b>
         </div>
 
-        <div className="pie-wrapper">
-          <Pie data={pieData} />
-        </div>
+        <Pie data={pieData} />
 
         <h3>Model Info</h3>
-        <p><b>Algorithm:</b> Naive Bayes</p>
-        <p><b>Vectorizer:</b> TF-IDF</p>
-        <p><b>Dataset:</b> SMS Spam Collection</p>
+        <p>Multinomial Naive Bayes + TF-IDF</p> {/* ✅ FIXED */}
       </div>
 
-      {/* Main Content */}
+      {/* Main */}
       <div className="main">
         <div className="card">
           <h3>Input Message</h3>
           <textarea
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Type or paste your SMS/email here..."
           />
           <button onClick={handlePredict}>Predict</button>
         </div>
 
         <div className="card">
           <h3>Recent Messages</h3>
-          {recentMessages.map((msg, i) => (
-            <div className="recent-msg" key={i}>
-              <span>{msg.text}</span>
-              <span className={`tag ${msg.label.toLowerCase()}`}>
-                {msg.label}
-              </span>
-            </div>
-          ))}
+
+          {recentMessages.length === 0 ? (
+            <p>No messages yet</p>
+          ) : (
+            recentMessages.map((msg, i) => (
+              <div key={i} className="recent-msg">
+                <span>{msg.text}</span>
+                <span className={`tag ${msg.label.toLowerCase()}`}>
+                  {msg.label}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Right Column */}
+      {/* Right */}
       <div className="right">
         {prediction && (
           <div className="card">
-            <h3>Prediction Result</h3>
-            <div className={`result-tag ${prediction}`}>
-              {prediction.toUpperCase()}
+            <h3>Prediction</h3>
+
+            <div className={`result-tag ${prediction.toLowerCase()}`}>
+              {prediction}
             </div>
-            <p>Confidence: {confidence}%</p>
+
+            <p>Confidence: {Number(confidence).toFixed(2)}%</p>
+
             <div className="progress">
               <div
-                className={`progress-fill ${prediction}`}
+                className={`progress-fill ${prediction.toLowerCase()}`}
                 style={{ width: `${confidence}%` }}
               ></div>
             </div>
-            <p>
-              {prediction === "ham"
-                ? "This message appears legitimate."
-                : "This message contains characteristics of spam."}
-            </p>
           </div>
         )}
-
-        <div className="card">
-          <h3>Last Flagged</h3>
-          <div className="result-tag spam">SPAM</div>
-          <p>Confidence: 92%</p>
-          <div className="progress">
-            <div className="progress-fill spam" style={{ width: "92%" }}></div>
-          </div>
-          <p>Claim your prize now! Limited time offer. Click the link to verify and receive your reward.</p>
-        </div>
       </div>
+
     </div>
   );
 };
